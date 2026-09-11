@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { ContactsPage } from './features/contacts/ContactsPage';
+import { SubmissionConfirmation } from './features/contacts/SubmissionConfirmation';
 
 function App() {
-  // The following Delivery unit consumes this transition boundary to render confirmation.
-  const [, setSubmissionSucceeded] = useState(false);
+  const [submissionSucceeded, setSubmissionSucceeded] = useState(false);
+
+  if (submissionSucceeded) {
+    return <SubmissionConfirmation onReturnHome={() => setSubmissionSucceeded(false)} />;
+  }
 
   return <ContactsPage onSubmissionSuccess={() => setSubmissionSucceeded(true)} />;
 }

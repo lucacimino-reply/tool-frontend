@@ -4,9 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { ContactForm } from '../../src/features/contacts/ContactForm';
 import { ContactsPage } from '../../src/features/contacts/ContactsPage';
 import { createContactSubmission } from '../../src/features/contacts/contacts.api';
+import App from '../../src/App';
 
 describe('STUDIO contact form', () => {
-  it('renders the required STUDIO frame and contact controls', () => {
+  it('renders the required STUDIO frame and keeps header labels presentational', async () => {
     render(<ContactsPage />);
     expect(screen.getByText('STUDIO')).toBeInTheDocument();
     expect(screen.getByText('Work')).toBeInTheDocument();
@@ -16,6 +17,12 @@ describe('STUDIO contact form', () => {
     expect(screen.getByPlaceholderText('Your name')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send message/i })).toBeInTheDocument();
+    const initialPath = window.location.pathname;
+    await userEvent.click(screen.getByText('Work'));
+    await userEvent.click(screen.getByText('About'));
+    await userEvent.click(screen.getByText('Contact'));
+    expect(window.location.pathname).toBe(initialPath);
+    expect(screen.getByRole('heading', { name: 'Contact Us' })).toBeInTheDocument();
   });
 
   it('shows required errors and makes no request for empty values', async () => {
@@ -113,6 +120,43 @@ describe('createContactSubmission', () => {
   it('maps malformed fetch outcomes to failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(null));
     await expect(createContactSubmission({ name: 'Ada', email: 'ada@example.com' })).resolves.toBe(false);
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('submission confirmation', () => {
+  it('shows confirmation only after an HTTP 201 and returns to a cleared form', async () => {
+    let resolveResponse: (response: Response) => void = () => undefined;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { resolveResponse = resolve; })));
+    render(<App />);
+
+    await userEvent.type(screen.getByLabelText('Name'), 'Ada');
+    await userEvent.type(screen.getByLabelText('Email Address'), 'ada@example.com');
+    await userEvent.click(screen.getByRole('button', { name: /send message/i }));
+    expect(screen.queryByRole('heading', { name: 'Thank you!' })).not.toBeInTheDocument();
+
+    resolveResponse(new Response(null, { status: 201 }));
+    expect(await screen.findByRole('heading', { name: 'Thank you!' })).toBeInTheDocument();
+    expect(screen.getByText("Your information has been successfully submitted. We'll be in touch shortly.")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to Home' })).toHaveClass('return-home');
+    expect(screen.getByText('Contact')).toHaveClass('active');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back to Home' }));
+    expect(screen.getByLabelText('Name')).toHaveValue('');
+    expect(screen.getByLabelText('Email Address')).toHaveValue('');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([200, 422, 500])('does not show confirmation for HTTP %i', async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status })));
+    render(<App />);
+    await userEvent.type(screen.getByLabelText('Name'), 'Ada');
+    await userEvent.type(screen.getByLabelText('Email Address'), 'ada@example.com');
+    await userEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to submit your information. Please try again.');
+    expect(screen.queryByRole('heading', { name: 'Thank you!' })).not.toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 });
