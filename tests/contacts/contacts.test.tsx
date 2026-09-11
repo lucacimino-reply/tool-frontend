@@ -130,6 +130,9 @@ describe('submission confirmation', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { resolveResponse = resolve; })));
     render(<App />);
 
+    await userEvent.click(screen.getByRole('button', { name: /send message/i }));
+    expect(screen.getByText('Name is required.')).toBeInTheDocument();
+    expect(screen.getByText('Email Address is required.')).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Name'), 'Ada');
     await userEvent.type(screen.getByLabelText('Email Address'), 'ada@example.com');
     await userEvent.click(screen.getByRole('button', { name: /send message/i }));
@@ -139,6 +142,9 @@ describe('submission confirmation', () => {
     expect(await screen.findByRole('heading', { name: 'Thank you!' })).toBeInTheDocument();
     expect(screen.getByText("Your information has been successfully submitted. We'll be in touch shortly.")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Back to Home' })).toHaveClass('return-home');
+    expect(document.querySelector('main')).toHaveClass('confirmation-main');
+    expect(screen.getByRole('heading', { name: 'Thank you!' }).closest('section')).toHaveClass('confirmation-card');
+    expect(document.querySelector('.success-mark')).toBeInTheDocument();
     expect(screen.getByText('Contact')).toHaveClass('active');
 
     await userEvent.click(screen.getByRole('button', { name: 'Back to Home' }));

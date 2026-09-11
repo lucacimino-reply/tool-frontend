@@ -2,9 +2,10 @@ import type { ReactNode } from 'react';
 
 interface StudioFrameProps {
   children: ReactNode;
+  mainClassName?: string;
 }
 
-export function StudioFrame({ children }: StudioFrameProps) {
+export function StudioFrame({ children, mainClassName }: StudioFrameProps) {
   return (
     <div className="page-shell">
       <header className="site-header">
@@ -18,7 +19,7 @@ export function StudioFrame({ children }: StudioFrameProps) {
           <span className="active">Contact</span>
         </nav>
       </header>
-      <main>{children}</main>
+      <main className={mainClassName}>{children}</main>
     </div>
   );
 }

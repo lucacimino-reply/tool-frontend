@@ -6,7 +6,7 @@ interface SubmissionConfirmationProps {
 
 export function SubmissionConfirmation({ onReturnHome }: SubmissionConfirmationProps) {
   return (
-    <StudioFrame>
+    <StudioFrame mainClassName="confirmation-main">
       <section className="contact-card confirmation-card" aria-labelledby="confirmation-heading">
         <div aria-hidden="true" className="success-mark">
           <svg viewBox="0 0 32 32">
