@@ -47,6 +47,10 @@ describe('STUDIO contact form', () => {
     await userEvent.click(screen.getByRole('button', { name: /send message/i }));
     expect(submitContact).toHaveBeenCalledWith({ name: 'N', email: `${'a'.repeat(242)}@example.com` });
 
+    fireEvent.change(name, { target: { value: 'a'.repeat(100) } });
+    await userEvent.click(screen.getByRole('button', { name: /send message/i }));
+    expect(submitContact).toHaveBeenLastCalledWith({ name: 'a'.repeat(100), email: `${'a'.repeat(242)}@example.com` });
+
     fireEvent.change(email, { target: { value: `${'a'.repeat(243)}@example.com` } });
     await userEvent.click(screen.getByRole('button', { name: /send message/i }));
     expect(screen.getByText('Email Address must be 254 characters or fewer.')).toBeInTheDocument();
@@ -86,7 +90,7 @@ describe('createContactSubmission', () => {
   it.each([201])('accepts only HTTP 201', async (status) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status })));
     await expect(createContactSubmission({ name: 'Ada', email: 'ada@example.com' })).resolves.toBe(true);
-    expect(fetch).toHaveBeenCalledWith('/api/contact-submissions', {
+    expect(fetch).toHaveBeenCalledWith('/contact-submissions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Ada', email: 'ada@example.com' }),
@@ -102,6 +106,12 @@ describe('createContactSubmission', () => {
 
   it('maps rejected fetches to failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network failure')));
+    await expect(createContactSubmission({ name: 'Ada', email: 'ada@example.com' })).resolves.toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('maps malformed fetch outcomes to failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(null));
     await expect(createContactSubmission({ name: 'Ada', email: 'ada@example.com' })).resolves.toBe(false);
     vi.unstubAllGlobals();
   });

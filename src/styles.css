@@ -19,11 +19,11 @@ button, input { font: inherit; }
   padding: 0 48px;
 }
 .brand { align-items: center; display: flex; font-size: 18px; font-weight: 700; gap: 11px; letter-spacing: -0.02em; }
-.brand-mark { background: #111827; border-radius: 999px; height: 23px; width: 23px; }
-nav { color: #6b7280; display: flex; font-size: 16px; font-weight: 500; gap: 34px; }
+.brand-mark { background: #111827; border-radius: 999px; height: 16px; width: 16px; }
+nav { color: #6b7280; display: flex; font-size: 16px; font-weight: 500; gap: 24px; }
 nav .active { color: #111827; }
-main { display: flex; justify-content: center; padding: 231px 24px 48px; }
-.contact-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 68px 48px 64px; width: 480px; }
+main { display: flex; justify-content: center; padding: 166px 24px 48px; }
+.contact-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 48px; width: 480px; }
 .contact-form { display: flex; flex-direction: column; gap: 32px; }
 .form-introduction { display: flex; flex-direction: column; gap: 12px; }
 h1 { font-size: 40px; font-weight: 600; letter-spacing: -0.025em; line-height: 44px; margin: 0; }
@@ -37,7 +37,7 @@ input:focus { border-color: #111827; outline: 2px solid #cbd5e1; outline-offset:
 input[aria-invalid="true"] { border-color: #b91c1c; }
 .field-error, .submission-error { color: #b91c1c; font-size: 14px; line-height: 20px; margin-top: -4px; }
 .submission-error { margin: -12px 0 0; }
-button { background: #111827; border: 0; border-radius: 8px; color: white; cursor: pointer; font-size: 16px; font-weight: 500; height: 72px; }
+button { background: #111827; border: 0; border-radius: 8px; color: white; cursor: pointer; font-size: 16px; font-weight: 500; height: 52px; }
 button:disabled { cursor: wait; opacity: 0.7; }
 button span { font-size: 20px; margin-left: 6px; }
 

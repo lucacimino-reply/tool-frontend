@@ -1,6 +1,7 @@
 import type { ContactSubmissionRequest } from './contacts.types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
+// An empty base deliberately targets this browser's origin; deployments can override it.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 function contactSubmissionsUrl(): string {
   return `${API_BASE_URL.replace(/\/$/, '')}/contact-submissions`;
