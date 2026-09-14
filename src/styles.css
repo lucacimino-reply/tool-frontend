@@ -46,7 +46,16 @@ input[aria-invalid='true'] { border-color: #b91c1c; }
 .field-error { color: #b91c1c; font-size: 14px; margin: -5px 0 0; }
 button { background: #111827; border: 0; border-radius: 8px; color: #fff; cursor: pointer; font: inherit; font-size: 21px; height: 72px; margin-top: 11px; }
 button:hover { background: #1f2937; }
+button:disabled { cursor: wait; opacity: 0.72; }
 button span { margin-left: 8px; }
+.submission-error { color: #b91c1c; font-size: 15px; margin: -12px 0 -12px; }
+
+.confirmation-card { padding: 65px 66px; text-align: center; }
+.success-symbol { align-items: center; background: #e5f5ec; border-radius: 50%; color: #10b981; display: flex; font-size: 41px; height: 90px; justify-content: center; line-height: 1; margin: 0 auto 53px; width: 90px; }
+.confirmation-card h1 { font-size: 56px; }
+.confirmation-copy { color: #6b7280; font-size: 23px; line-height: 1.5; margin: 26px auto 46px; max-width: 530px; }
+.secondary-button { background: #f8fafc; border: 1px solid #dfe3e8; color: #111827; margin: 0; width: 100%; }
+.secondary-button:hover { background: #f1f5f9; }
 
 @media (max-width: 640px) {
   .site-header { height: auto; min-height: 72px; padding: 18px 20px; }
@@ -57,4 +66,8 @@ button span { margin-left: 8px; }
   .contact-card { border-radius: 16px; padding: 32px 24px; width: 100%; }
   h1 { font-size: 40px; }
   .intro { font-size: 18px; margin-bottom: 36px; }
+  .confirmation-card { padding: 48px 24px; }
+  .success-symbol { height: 72px; margin-bottom: 36px; width: 72px; }
+  .confirmation-card h1 { font-size: 40px; }
+  .confirmation-copy { font-size: 18px; margin: 20px 0 32px; }
 }

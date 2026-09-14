@@ -1,5 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
+import { createSubmission } from './contacts.api'
 import type { ContactErrors, ContactField, ContactValues } from './contacts.types'
 
 const EMPTY_VALUES: ContactValues = { name: '', email: '' }
@@ -25,9 +26,15 @@ function validate(values: ContactValues): ContactErrors {
   return errors
 }
 
-export function ContactForm() {
+interface ContactFormProps {
+  onSubmitted: () => void
+}
+
+export function ContactForm({ onSubmitted }: ContactFormProps) {
   const [values, setValues] = useState<ContactValues>(EMPTY_VALUES)
   const [errors, setErrors] = useState<ContactErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionFailed, setSubmissionFailed] = useState(false)
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const field = event.target.name as ContactField
@@ -43,9 +50,25 @@ export function ContactForm() {
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setErrors(validate(values))
+    if (isSubmitting) return
+
+    const nextErrors = validate(values)
+    setErrors(nextErrors)
+    setSubmissionFailed(false)
+
+    if (Object.keys(nextErrors).length > 0) return
+
+    setIsSubmitting(true)
+    const wasCreated = await createSubmission(values)
+    setIsSubmitting(false)
+
+    if (wasCreated) {
+      onSubmitted()
+    } else {
+      setSubmissionFailed(true)
+    }
   }
 
   return (
@@ -78,7 +101,10 @@ export function ContactForm() {
         />
         {errors.email && <p className="field-error" id="email-error">{errors.email}</p>}
       </div>
-      <button type="submit">Send Message <span aria-hidden="true">↗</span></button>
+      {submissionFailed && <p className="submission-error" role="alert">Unable to submit your information. Please try again.</p>}
+      <button disabled={isSubmitting} type="submit">
+        {isSubmitting ? 'Sending Message...' : <>Send Message <span aria-hidden="true">↗</span></>}
+      </button>
     </form>
   )
 }
