@@ -9,7 +9,9 @@ Install pinned dependencies with `npm ci`, then run `npm run dev`.
 Run client tests with `npm test` and create production assets with `npm run build`.
 
 The browser posts submissions to `${VITE_API_BASE_URL:-/api}/submissions`. Set
-`VITE_API_BASE_URL` at build time to use a different API base URL.
+`VITE_API_BASE_URL` at build time to use a different API base URL. During local
+development, Vite forwards the default `/api` requests to `BACKEND_UPSTREAM` (or
+`http://localhost:8081` when it is unset).
 
 ## Container image
 
