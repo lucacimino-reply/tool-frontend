@@ -1,0 +1,60 @@
+:root {
+  background: #f8fafc;
+  color: #111827;
+  font-family: Inter, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; min-width: 320px; }
+
+.page-shell { min-height: 100vh; }
+
+.site-header {
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  height: 72px;
+  justify-content: space-between;
+  padding: 0 48px;
+}
+
+.brand { align-items: center; display: flex; font-size: 26px; font-weight: 700; gap: 11px; letter-spacing: -1px; }
+.brand-mark { background: #111827; border-radius: 50%; display: block; height: 23px; width: 23px; }
+nav { color: #6b7280; display: flex; font-size: 22px; gap: 36px; }
+nav .current { color: #111827; }
+
+main { display: flex; justify-content: center; padding: 231px 24px 80px; }
+
+.contact-card {
+  background: #fff;
+  border: 1px solid #dfe3e8;
+  border-radius: 22px;
+  padding: 66px;
+  width: 666px;
+}
+
+h1 { font-size: 56px; letter-spacing: -2px; line-height: 1; margin: 0; }
+.intro { color: #6b7280; font-size: 23px; line-height: 1.5; margin: 18px 0 47px; max-width: 510px; }
+.contact-form { display: grid; gap: 33px; }
+.field { display: grid; gap: 13px; }
+label { font-size: 21px; font-weight: 500; }
+input { border: 1px solid #dfe3e8; border-radius: 8px; color: #111827; font: inherit; font-size: 21px; height: 48px; padding: 0 21px; width: 100%; }
+input::placeholder { color: #6b7280; }
+input:focus { border-color: #111827; outline: 2px solid #cbd5e1; outline-offset: 1px; }
+input[aria-invalid='true'] { border-color: #b91c1c; }
+.field-error { color: #b91c1c; font-size: 14px; margin: -5px 0 0; }
+button { background: #111827; border: 0; border-radius: 8px; color: #fff; cursor: pointer; font: inherit; font-size: 21px; height: 72px; margin-top: 11px; }
+button:hover { background: #1f2937; }
+button span { margin-left: 8px; }
+
+@media (max-width: 640px) {
+  .site-header { height: auto; min-height: 72px; padding: 18px 20px; }
+  .brand { font-size: 21px; gap: 8px; }
+  .brand-mark { height: 18px; width: 18px; }
+  nav { font-size: 16px; gap: 16px; }
+  main { padding: 64px 16px 32px; }
+  .contact-card { border-radius: 16px; padding: 32px 24px; width: 100%; }
+  h1 { font-size: 40px; }
+  .intro { font-size: 18px; margin-bottom: 36px; }
+}
