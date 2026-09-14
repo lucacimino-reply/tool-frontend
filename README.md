@@ -22,4 +22,4 @@ docker build --tag tool-frontend:connect-submission-lifecycle-and-confirmation .
 ```
 
 The image listens on port `8080`. It requires `BACKEND_UPSTREAM` to be an HTTP
-or HTTPS URL when started; Nginx uses it to forward `/api/*` requests unchanged.
+or HTTPS URL when started; Nginx forwards `/api/*` requests to the backend's root API paths.
