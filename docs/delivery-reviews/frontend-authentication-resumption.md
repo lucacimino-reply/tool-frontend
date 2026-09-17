@@ -32,7 +32,7 @@
 
 ## Verification
 
-- `npm test`: passed, 15 tests. This covers cookie-backed session restoration, the startup booking race, payload normalization, preserved password whitespace, exact 401 text, client validation, duplicate-email mapping, generic failures, password visibility, both pending-booking success paths, standalone success, and authentication exits.
+- `npm test`: passed, 16 tests. This covers cookie-backed session restoration, the startup booking race, payload normalization, preserved password whitespace, exact 401 text, client validation, duplicate-email and 422 field-error mapping, generic failures, password visibility, both pending-booking success paths, standalone success, and authentication exits.
 - `npm run build`: passed, including strict TypeScript project checking and Vite production generation.
 - `docker build -t clean-frontend:clean-authentication-and-booking-resumption .`: passed without starting a container. The image build used this repository only.
 - `build-manifest.json` records `clean-frontend:clean-authentication-and-booking-resumption`.

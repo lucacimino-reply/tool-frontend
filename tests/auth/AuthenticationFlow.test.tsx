@@ -77,6 +77,21 @@ describe('authentication and booking resumption', () => {
     expect(await screen.findByText('An account already uses this email.')).toBeInTheDocument();
   });
 
+  it('maps contracted signup validation errors to their fields', async () => {
+    mockFetch(response(401), response(422, { fieldErrors: { email: 'Enter a valid email address.' } }));
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Login' }));
+    await user.click(screen.getByRole('button', { name: 'Sign up' }));
+    await user.type(screen.getByLabelText('Name'), 'New Customer');
+    await user.type(screen.getByLabelText('Email'), 'new@example.com');
+    await user.type(screen.getByLabelText('Enter New Password'), 'password');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText('Enter a valid email address.')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('new@example.com')).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('shows a safe form error for a server failure without field errors', async () => {
     mockFetch(response(401), response(500));
     const user = userEvent.setup();
