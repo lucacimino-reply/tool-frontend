@@ -53,6 +53,46 @@ export interface BillingSnapshot {
 
 export interface BookingQuote { billing: BillingSnapshot }
 
+export type ContactPreference = 'text' | 'call' | 'email';
+
+export interface PaymentInput {
+  cardNumber: string;
+  expiry: string;
+  cvv: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  contactPreference: ContactPreference;
+}
+
+export interface CreateBookingRequest {
+  service: BookingQuoteRequest['service'];
+  schedule: { date: string; customerTimeZone: string; arrival: ArrivalSelection };
+  details: {
+    frequency: Frequency;
+    address: string;
+    apartmentNumber?: string;
+    accessMethod: AccessMethod;
+    extras: Extra[];
+    hasPets: boolean;
+    petDescription?: string;
+    additionalNotes?: string;
+  };
+  promoCode?: string;
+  payment: PaymentInput;
+}
+
+export interface CompletedBooking {
+  id: string;
+  customer: { id: string; name: string; email: string };
+  service: CreateBookingRequest['service'];
+  schedule: CreateBookingRequest['schedule'];
+  details: Omit<CreateBookingRequest['details'], 'extras'> & { extras: Array<{ name: Extra; price: string }> };
+  contact: Omit<PaymentInput, 'cardNumber' | 'expiry' | 'cvv'> & { cardLastFour: string };
+  billing: BillingSnapshot;
+  createdAt: string;
+}
+
 export function createBookingDraft(service: BookingDraft['service']): BookingDraft {
   const now = new Date();
   const date = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
@@ -72,4 +112,26 @@ export function toBookingQuoteRequest(draft: BookingDraft): BookingQuoteRequest 
   const cleanType = { Standard: 'standard', 'Deep Clean': 'deep_clean', 'Moving In/Out': 'moving_in_out', 'Post Construction': 'post_construction' } as const;
   const promoCode = draft.promoCode?.trim();
   return { service: { location: location[draft.service.location], rooms: draft.service.rooms, cleanType: cleanType[draft.service.cleanType] }, arrival: draft.arrival, details: draft.details, ...(promoCode ? { promoCode } : {}) };
+}
+
+export function toCreateBookingRequest(draft: BookingDraft, payment: PaymentInput): CreateBookingRequest {
+  if (!draft.schedule || !draft.accessMethod || draft.hasPets === undefined) throw new Error('Your booking details are incomplete.');
+  const quote = toBookingQuoteRequest(draft);
+  const optional = (value: string | undefined) => value?.trim() || undefined;
+  return {
+    service: quote.service,
+    schedule: { ...draft.schedule, customerTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, arrival: draft.arrival },
+    details: {
+      frequency: draft.details.frequency,
+      address: draft.address?.trim() ?? '',
+      ...(optional(draft.apartmentNumber) ? { apartmentNumber: optional(draft.apartmentNumber) } : {}),
+      accessMethod: draft.accessMethod,
+      extras: draft.details.extras,
+      hasPets: draft.hasPets,
+      ...(draft.hasPets && optional(draft.petDescription) ? { petDescription: optional(draft.petDescription) } : {}),
+      ...(optional(draft.additionalNotes) ? { additionalNotes: optional(draft.additionalNotes) } : {}),
+    },
+    ...(quote.promoCode ? { promoCode: quote.promoCode } : {}),
+    payment,
+  };
 }

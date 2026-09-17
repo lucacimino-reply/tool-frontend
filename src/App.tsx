@@ -7,14 +7,15 @@ import { BookingStepOne } from './features/booking/BookingStepOne';
 import { BookingLayout } from './features/booking/BookingLayout';
 import { BookingSchedule } from './features/booking/BookingSchedule';
 import { BookingTiming } from './features/booking/BookingTiming';
-import { quoteBooking, QuoteRequestError } from './features/booking/booking.api';
+import { createBooking, quoteBooking, BookingRequestError, QuoteRequestError } from './features/booking/booking.api';
 import { BookingDetails } from './features/booking/BookingDetails';
 import { BookingCheckout } from './features/booking/BookingCheckout';
-import { createBookingDraft, toBookingQuoteRequest, type BookingDraft, type BookingQuote, type BookingStep } from './features/booking/booking.types';
+import { createBookingDraft, toBookingQuoteRequest, toCreateBookingRequest, type BookingDraft, type BookingQuote, type BookingStep, type CompletedBooking, type PaymentInput } from './features/booking/booking.types';
+import { BookingConfirmation } from './features/booking/BookingConfirmation';
 import { HomePage, type HomeSelection } from './features/home/HomePage';
 
 export default function App() {
-  const [route, setRoute] = useState<'home' | 'login' | 'signup' | 'booking'>('home');
+  const [route, setRoute] = useState<'home' | 'login' | 'signup' | 'booking' | 'confirmation'>('home');
   const [selection, setSelection] = useState<HomeSelection>({ location: 'Studio', rooms: 2, cleanType: 'Standard' });
   const [pendingBooking, setPendingBooking] = useState<HomeSelection | null>(null);
   const [customer, setCustomer] = useState<AuthenticatedCustomer | null>(null);
@@ -24,6 +25,7 @@ export default function App() {
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [quoteErrors, setQuoteErrors] = useState<Record<string, string>>({});
   const [quotePending, setQuotePending] = useState(false);
+  const [completedBooking, setCompletedBooking] = useState<CompletedBooking | null>(null);
   const quoteRequestId = useRef(0);
   const quoteRequest = draft ? toBookingQuoteRequest(draft) : null;
   const quoteRequestKey = quoteRequest ? JSON.stringify(quoteRequest) : null;
@@ -111,9 +113,25 @@ export default function App() {
     }
   }
 
+  async function placeOrder(payment: PaymentInput, idempotencyKey: string) {
+    if (!draft) throw new Error('Your booking draft is no longer available.');
+    try {
+      const completed = await createBooking(toCreateBookingRequest(draft, payment), idempotencyKey);
+      setCompletedBooking(completed);
+      setDraft(null);
+      setQuote(null);
+      setQuoteErrors({});
+      setRoute('confirmation');
+    } catch (error) {
+      if (error instanceof BookingRequestError) throw error;
+      throw new Error('We could not place your order. Please try again.');
+    }
+  }
+
   if (route === 'booking' && draft) return <BookingLayout draft={draft} step={bookingStep} onNavigate={setBookingStep} onDiscard={discardBooking} quote={quote} quoteErrors={quoteErrors} quotePending={quotePending}>
-    {bookingStep === 1 ? <BookingStepOne draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(2)} /> : bookingStep === 2 ? <BookingSchedule draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(3)} /> : bookingStep === 3 ? <BookingTiming draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(4)} /> : bookingStep === 4 ? <BookingDetails draft={draft} quoteErrors={quoteErrors} onDraftChange={setDraft} onNext={() => setBookingStep(5)} /> : <BookingCheckout draft={draft} quote={quote} quotePending={quotePending} quoteErrors={quoteErrors} onApplyPromo={applyPromo} />}
+    {bookingStep === 1 ? <BookingStepOne draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(2)} /> : bookingStep === 2 ? <BookingSchedule draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(3)} /> : bookingStep === 3 ? <BookingTiming draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(4)} /> : bookingStep === 4 ? <BookingDetails draft={draft} quoteErrors={quoteErrors} onDraftChange={setDraft} onNext={() => setBookingStep(5)} /> : <BookingCheckout draft={draft} quote={quote} quotePending={quotePending} quoteErrors={quoteErrors} onApplyPromo={applyPromo} onPlaceOrder={placeOrder} />}
   </BookingLayout>;
+  if (route === 'confirmation' && completedBooking) return <BookingConfirmation booking={completedBooking} onReturnHome={() => setRoute('home')} />;
   if (route === 'login' || route === 'signup') return <AuthPage mode={route} onModeChange={setRoute} onSuccess={authenticated} onExit={leaveAuthentication} />;
   return <HomePage selection={selection} onSelectionChange={setSelection} onLogin={() => setRoute('login')} onBooking={beginBooking} onWordmark={() => setPendingBooking(null)} />;
 }

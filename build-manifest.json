@@ -1,6 +1,6 @@
 {
   "image": {
     "name": "clean-frontend",
-    "tag": "checkout-billing-and-promo"
+    "tag": "checkout-payment-submission-and-confirmation"
   }
 }
