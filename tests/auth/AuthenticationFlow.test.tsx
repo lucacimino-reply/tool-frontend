@@ -17,6 +17,12 @@ function mockFetch(...responses: Response[]) {
   return fetchMock;
 }
 
+function deferred<T>() {
+  let resolve: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => { resolve = nextResolve; });
+  return { promise, resolve: resolve! };
+}
+
 afterEach(() => vi.unstubAllGlobals());
 
 describe('authentication and booking resumption', () => {
@@ -27,6 +33,20 @@ describe('authentication and booking resumption', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/session', expect.objectContaining({ credentials: 'include' })));
     await user.click(screen.getByRole('button', { name: /Booking/ }));
     expect(screen.getByRole('heading', { name: /Customize Your\s*Requirements/ })).toBeInTheDocument();
+  });
+
+  it('waits for session restoration before routing a booking request', async () => {
+    const session = deferred<Response>();
+    const fetchMock = vi.fn().mockReturnValueOnce(session.promise);
+    vi.stubGlobal('fetch', fetchMock);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /Booking/ }));
+    expect(screen.getByRole('heading', { name: /Your One Stop Cleaning/ })).toBeInTheDocument();
+
+    session.resolve(response(200, customer));
+    expect(await screen.findByRole('heading', { name: /Customize Your\s*Requirements/ })).toBeInTheDocument();
   });
 
   it('normalizes login email, preserves password whitespace, and shows the exact 401 feedback', async () => {
@@ -55,6 +75,17 @@ describe('authentication and booking resumption', () => {
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText('An account already uses this email.')).toBeInTheDocument();
+  });
+
+  it('shows a safe form error for a server failure without field errors', async () => {
+    mockFetch(response(401), response(500));
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Login' }));
+    await user.type(screen.getByLabelText('Email'), 'customer@example.com');
+    await user.type(screen.getByLabelText('Password'), 'password');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to continue. Please try again.');
   });
 
   it('toggles password visibility without changing the entered password', async () => {

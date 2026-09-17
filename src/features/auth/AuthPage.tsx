@@ -50,7 +50,8 @@ export function AuthPage({ mode, onModeChange, onSuccess, onExit }: AuthPageProp
     } catch (error) {
       if (error instanceof AuthApiError) {
         if (!isSignup && error.status === 401) setErrors({ email: 'The email or password you entered is incorrect.' });
-        else setErrors(error.fieldErrors);
+        else if (Object.keys(error.fieldErrors).length) setErrors(error.fieldErrors);
+        else setErrors({ form: 'Unable to continue. Please try again.' });
       } else setErrors({ form: 'Unable to continue. Please try again.' });
     } finally { setSubmitting(false); }
   }

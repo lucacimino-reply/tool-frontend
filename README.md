@@ -16,9 +16,10 @@ Run checks with `npm test` and create production assets with `npm run build`.
 Build the independently runnable static frontend image without starting it:
 
 ```bash
-docker build -t clean-frontend:build-public-clean-home .
+docker build -t clean-frontend:clean-authentication-and-booking-resumption .
 ```
 
 The image listens on port `8080`. At runtime, it requires `BACKEND_UPSTREAM` to
 be a valid `http://` or `https://` URL. Browser `/api/*` requests are proxied
-to that upstream; this public-home unit does not make API requests itself.
+to that upstream, including the authentication session, login, and signup
+requests.

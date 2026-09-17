@@ -11,16 +11,46 @@ export default function App() {
   const [selection, setSelection] = useState<HomeSelection>({ location: 'Studio', rooms: 2, cleanType: 'Standard' });
   const [pendingBooking, setPendingBooking] = useState<HomeSelection | null>(null);
   const [customer, setCustomer] = useState<AuthenticatedCustomer | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<'loading' | 'authenticated' | 'signed-out'>('loading');
 
-  useEffect(() => { getSession().then(setCustomer).catch(() => setCustomer(null)); }, []);
+  useEffect(() => {
+    getSession()
+      .then((nextCustomer) => {
+        setCustomer(nextCustomer);
+        setSessionStatus('authenticated');
+      })
+      .catch(() => {
+        setCustomer(null);
+        setSessionStatus('signed-out');
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!pendingBooking || sessionStatus === 'loading') return;
+    if (customer) {
+      setSelection(pendingBooking);
+      setPendingBooking(null);
+      setRoute('booking');
+    } else {
+      setRoute('login');
+    }
+  }, [customer, pendingBooking, sessionStatus]);
 
   function beginBooking(currentSelection: HomeSelection) {
-    if (customer) { setSelection(currentSelection); setRoute('booking'); }
-    else { setPendingBooking(currentSelection); setRoute('login'); }
+    if (sessionStatus === 'loading') {
+      setPendingBooking(currentSelection);
+    } else if (customer) {
+      setSelection(currentSelection);
+      setRoute('booking');
+    } else {
+      setPendingBooking(currentSelection);
+      setRoute('login');
+    }
   }
 
   function authenticated(nextCustomer: AuthenticatedCustomer) {
     setCustomer(nextCustomer);
+    setSessionStatus('authenticated');
     if (pendingBooking) { setSelection(pendingBooking); setPendingBooking(null); setRoute('booking'); }
     else setRoute('home');
   }
