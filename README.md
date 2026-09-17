@@ -16,7 +16,7 @@ Run checks with `npm test` and create production assets with `npm run build`.
 Build the independently runnable static frontend image without starting it:
 
 ```bash
-docker build -t clean-frontend:clean-authentication-and-booking-resumption .
+docker build -t clean-frontend:booking-draft-service-summary .
 ```
 
 The image listens on port `8080`. At runtime, it requires `BACKEND_UPSTREAM` to
