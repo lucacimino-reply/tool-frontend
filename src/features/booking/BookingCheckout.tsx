@@ -4,14 +4,14 @@ import { BookingRequestError } from './booking.api';
 import type { BookingDraft, BookingQuote, ContactPreference, PaymentInput } from './booking.types';
 import { formatLocalDate } from './local-date';
 
-interface BookingCheckoutProps { draft: BookingDraft; quote: BookingQuote | null; quotePending: boolean; quoteErrors: Record<string, string>; onApplyPromo: (code: string) => Promise<void>; onPlaceOrder: (payment: PaymentInput, idempotencyKey: string) => Promise<void>; }
+interface BookingCheckoutProps { draft: BookingDraft; quote: BookingQuote | null; quotePending: boolean; quoteErrors: Record<string, string>; payment: PaymentForm; onPaymentChange: (payment: PaymentForm) => void; onApplyPromo: (code: string) => Promise<void>; onPlaceOrder: (payment: PaymentInput, idempotencyKey: string) => Promise<void>; }
 const frequencyLabels = { onetime: 'Onetime', weekly: 'Weekly', every_2_weeks: 'Every 2 weeks', every_4_weeks: 'Every 4 weeks' } as const;
 const extraLabels = { inside_fridge: 'Inside fridge', inside_oven: 'Inside oven', inside_cabinets: 'Inside Cabinets' } as const;
 const contactLabels: Record<ContactPreference, string> = { text: 'Text', call: 'Call', email: 'Email' };
-function money(value: string) { return `$${value}`; }
+function money(value: string) { return value.startsWith('-') ? `-$${value.slice(1)}` : `$${value}`; }
 
-interface PaymentForm { cardNumber: string; expiry: string; cvv: string; fullName: string; email: string; phone: string; contacts: ContactPreference[]; }
-const emptyPayment: PaymentForm = { cardNumber: '', expiry: '', cvv: '', fullName: '', email: '', phone: '', contacts: [] };
+export interface PaymentForm { cardNumber: string; expiry: string; cvv: string; fullName: string; email: string; phone: string; contacts: ContactPreference[]; }
+export const emptyPayment: PaymentForm = { cardNumber: '', expiry: '', cvv: '', fullName: '', email: '', phone: '', contacts: [] };
 
 export function validatePayment(payment: PaymentForm, now = new Date()): Record<string, string> {
   const errors: Record<string, string> = {};
@@ -40,11 +40,10 @@ export function validatePayment(payment: PaymentForm, now = new Date()): Record<
 
 function createIdempotencyKey() { return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`; }
 
-export function BookingCheckout({ draft, quote, quotePending, quoteErrors, onApplyPromo, onPlaceOrder }: BookingCheckoutProps) {
+export function BookingCheckout({ draft, quote, quotePending, quoteErrors, payment, onPaymentChange, onApplyPromo, onPlaceOrder }: BookingCheckoutProps) {
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
-  const [payment, setPayment] = useState<PaymentForm>(emptyPayment);
   const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
   const [orderError, setOrderError] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -62,7 +61,7 @@ export function BookingCheckout({ draft, quote, quotePending, quoteErrors, onApp
   const nonPaymentErrors = Object.entries(paymentErrors).filter(([field]) => !field.startsWith('payment.') && !['cardNumber', 'expiry', 'cvv', 'fullName', 'email', 'phone', 'contactPreference'].includes(field));
   function changePayment(field: Exclude<keyof PaymentForm, 'contacts'>, value: string) {
     if (field === 'cardNumber' && value.replace(/[ -]/g, '').length > 19) return;
-    setPayment({ ...payment, [field]: value });
+    onPaymentChange({ ...payment, [field]: value });
     setPaymentErrors((current) => ({ ...current, [field]: '', [`payment.${field}`]: '' }));
     setOrderError(null);
   }
@@ -93,14 +92,14 @@ export function BookingCheckout({ draft, quote, quotePending, quoteErrors, onApp
         <PaymentField label="Full Name" value={payment.fullName} error={paymentError('fullName')} onChange={(value) => changePayment('fullName', value)} maxLength={100} />
         <PaymentField label="Email Address" value={payment.email} error={paymentError('email')} onChange={(value) => changePayment('email', value)} maxLength={254} type="email" />
         <PaymentField label="Phone Number" value={payment.phone} error={paymentError('phone')} onChange={(value) => changePayment('phone', value)} maxLength={100} type="tel" />
-        <fieldset className="contact-choices"><legend>How do we contact you</legend><div>{(Object.keys(contactLabels) as ContactPreference[]).map((contact) => <button key={contact} type="button" className={payment.contacts.includes(contact) ? 'selected' : ''} aria-pressed={payment.contacts.includes(contact)} onClick={() => setPayment({ ...payment, contacts: payment.contacts.includes(contact) ? payment.contacts.filter((item) => item !== contact) : [...payment.contacts, contact] })}>{contactLabels[contact]}</button>)}</div>{paymentError('contactPreference') && <p className="booking-field-error" role="alert">{paymentError('contactPreference')}</p>}</fieldset>
+        <fieldset className="contact-choices"><legend>How do we contact you</legend><div>{(Object.keys(contactLabels) as ContactPreference[]).map((contact) => <button key={contact} type="button" className={payment.contacts.includes(contact) ? 'selected' : ''} aria-pressed={payment.contacts.includes(contact)} onClick={() => onPaymentChange({ ...payment, contacts: [contact] })}>{contactLabels[contact]}</button>)}</div>{paymentError('contactPreference') && <p className="booking-field-error" role="alert">{paymentError('contactPreference')}</p>}</fieldset>
       </div>
       {orderError && <p className="booking-field-error" role="alert">{orderError}</p>}
       {nonPaymentErrors.map(([field, message]) => <p className="booking-field-error" role="alert" key={field}>{message}</p>)}
     </section>
     <aside className="billing-panel" aria-labelledby="billing-heading"><h2 id="billing-heading">Billing</h2>
       <section className="appointment-recap" aria-label="Appointment recap"><div><span>{draft.service.location}</span><span>{draft.service.rooms} Rooms</span><span>{draft.service.cleanType}</span></div><p><strong>{frequencyLabels[draft.details.frequency]}</strong>{draft.schedule?.date ? ` ${formatLocalDate(draft.schedule.date)}` : ''} at {draft.arrival.type === 'flexible' ? '9:00am-4:00pm' : draft.arrival.time}</p><p>{[draft.address, draft.apartmentNumber].filter(Boolean).join(', ') || 'Address to be added'}</p>{draft.details.extras.length > 0 && <p>Add-on: {draft.details.extras.map((extra) => extraLabels[extra]).join(', ')}</p>}</section>
-      <div className="promo-row"><label>Discount<input aria-label="Discount code" value={promoInput} maxLength={65} onChange={(event) => { setPromoInput(event.target.value); setPromoError(null); }} aria-invalid={Boolean(promoFieldError)} /></label><button type="button" onClick={applyPromo} disabled={applying || quotePending}>Apply</button></div>
+      <div className="promo-row"><label>Discount<input aria-label="Discount code" value={promoInput} maxLength={64} onChange={(event) => { setPromoInput(event.target.value); setPromoError(null); }} aria-invalid={Boolean(promoFieldError)} /></label><button type="button" onClick={applyPromo} disabled={applying || quotePending}>Apply</button></div>
       {promoFieldError && <p className="booking-field-error" role="alert">{promoFieldError}</p>}
       {billing ? <section className="billing-lines" aria-live="polite"><p><span>Appointment Value</span><strong>{money(billing.appointmentValue)}</strong></p><p><span>Promo Discount</span><strong>{money(billing.promoDiscount)}</strong></p><p><span>Subtotal</span><strong>{money(billing.subtotal)}</strong></p><p><span>Tax</span><strong>{money(billing.tax)}</strong></p><p className="billing-total"><span>Total</span><strong>{money(billing.total)}</strong></p></section> : <p className="billing-empty">Your canonical billing snapshot will appear here.</p>}
       <button className="place-order" type="button" onClick={placeOrder} disabled={placingOrder}>{placingOrder ? 'Placing order...' : 'Place order'}</button>

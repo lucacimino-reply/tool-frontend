@@ -78,4 +78,15 @@ describe('booking submission', () => {
     expect(await screen.findByText('CVV was declined.')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Credit Card' })).toHaveValue('4111-1111 1111 1111');
   });
+
+  it('keeps contact selection mutually exclusive', async () => {
+    const user = userEvent.setup();
+    installFetch(() => response(500));
+    render(<App />);
+    await openCheckout(user);
+    await user.click(screen.getByRole('button', { name: 'Text' }));
+    await user.click(screen.getByRole('button', { name: 'Email' }));
+    await user.click(screen.getByRole('button', { name: 'Place order' }));
+    expect(screen.queryByText('Select exactly one contact preference.')).not.toBeInTheDocument();
+  });
 });

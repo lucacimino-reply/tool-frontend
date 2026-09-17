@@ -51,7 +51,7 @@ describe('booking checkout billing', () => {
     const discount = screen.getByRole('textbox', { name: 'Discount code' });
     await user.type(discount, '  clean10  ');
     await user.click(screen.getByRole('button', { name: 'Apply' }));
-    await waitFor(() => expect(screen.getByText('Promo Discount').parentElement).toHaveTextContent('$-10.00'));
+    await waitFor(() => expect(screen.getByText('Promo Discount').parentElement).toHaveTextContent('-$10.00'));
     const promoCall = fetchMock.mock.calls.find(([url, init]) => url === '/api/booking-quotes' && JSON.parse((init as RequestInit).body as string).promoCode === 'clean10');
     expect(promoCall).toBeDefined();
     await user.clear(discount);
@@ -61,7 +61,7 @@ describe('booking checkout billing', () => {
     expect(screen.getByText('Total').parentElement).toHaveTextContent('$24.09');
   });
 
-  it('rejects empty and overlength promos without requesting or replacing billing', async () => {
+  it('rejects empty promos without requesting or replacing billing and caps the input at the contract limit', async () => {
     const user = userEvent.setup();
     const fetchMock = installFetch(() => response(200, quote({ promoCode: 'CLEAN10', promoDiscount: '-10.00', subtotal: '21.90', tax: '2.19', total: '24.09' })));
     render(<App />);
@@ -70,9 +70,7 @@ describe('booking checkout billing', () => {
     const callsBefore = fetchMock.mock.calls.length;
     await user.click(screen.getByRole('button', { name: 'Apply' }));
     expect(screen.getByText('Enter an eligible discount code.')).toBeInTheDocument();
-    await user.type(discount, 'x'.repeat(65));
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
-    expect(screen.getByText('Discount code must be 64 characters or fewer.')).toBeInTheDocument();
+    expect(discount).toHaveAttribute('maxlength', '64');
     expect(fetchMock).toHaveBeenCalledTimes(callsBefore);
   });
 
@@ -86,5 +84,18 @@ describe('booking checkout billing', () => {
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(await screen.findByRole('heading', { name: 'Billing' })).toBeInTheDocument();
     expect(screen.getByLabelText('Appointment recap')).toHaveTextContent('1009 3rd Ave');
+  });
+
+  it('retains payment entry while editing the draft through the summary strip', async () => {
+    const user = userEvent.setup();
+    installFetch(() => response(200, quote()));
+    render(<App />);
+    await openCheckout(user);
+    await user.type(screen.getByRole('textbox', { name: 'Credit Card' }), '4111 1111 1111 1111');
+    await user.type(screen.getByRole('textbox', { name: 'CVV' }), '123');
+    await user.click(screen.getByRole('button', { name: /Address/ }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByRole('textbox', { name: 'Credit Card' })).toHaveValue('4111 1111 1111 1111');
+    expect(screen.getByRole('textbox', { name: 'CVV' })).toHaveValue('123');
   });
 });

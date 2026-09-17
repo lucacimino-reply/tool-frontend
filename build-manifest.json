@@ -1,6 +1,6 @@
 {
   "image": {
     "name": "clean-frontend",
-    "tag": "checkout-payment-submission-and-confirmation"
+    "tag": "frontend-checkout-confirmation-review"
   }
 }
