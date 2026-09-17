@@ -9,6 +9,7 @@ import { BookingSchedule } from './features/booking/BookingSchedule';
 import { BookingTiming } from './features/booking/BookingTiming';
 import { quoteBooking, QuoteRequestError } from './features/booking/booking.api';
 import { BookingDetails } from './features/booking/BookingDetails';
+import { BookingCheckout } from './features/booking/BookingCheckout';
 import { createBookingDraft, toBookingQuoteRequest, type BookingDraft, type BookingQuote, type BookingStep } from './features/booking/booking.types';
 import { HomePage, type HomeSelection } from './features/home/HomePage';
 
@@ -22,6 +23,7 @@ export default function App() {
   const [bookingStep, setBookingStep] = useState<BookingStep>(1);
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [quoteErrors, setQuoteErrors] = useState<Record<string, string>>({});
+  const [quotePending, setQuotePending] = useState(false);
   const quoteRequestId = useRef(0);
   const quoteRequest = draft ? toBookingQuoteRequest(draft) : null;
   const quoteRequestKey = quoteRequest ? JSON.stringify(quoteRequest) : null;
@@ -56,11 +58,13 @@ export default function App() {
   useEffect(() => {
     if (!quoteRequest || !customer) return;
     const requestId = ++quoteRequestId.current;
+    setQuotePending(true);
     quoteBooking(quoteRequest).then((nextQuote) => {
-      if (requestId === quoteRequestId.current) { setQuote(nextQuote); setQuoteErrors({}); }
+      if (requestId === quoteRequestId.current) { setQuote(nextQuote); setQuoteErrors({}); setQuotePending(false); }
     }).catch((error: unknown) => {
       if (requestId !== quoteRequestId.current) return;
-      if (error instanceof QuoteRequestError && error.status === 401) { setCustomer(null); setSessionStatus('signed-out'); setRoute('login'); return; }
+      setQuotePending(false);
+      if (error instanceof QuoteRequestError && error.status === 401) { setQuoteErrors({ quote: 'Your session has ended. Sign in again, then retry your quote.' }); return; }
       if (error instanceof QuoteRequestError) setQuoteErrors(Object.keys(error.fieldErrors).length ? error.fieldErrors : { quote: error.message });
       else setQuoteErrors({ quote: 'We could not update your appointment value. Please try again.' });
     });
@@ -93,8 +97,22 @@ export default function App() {
 
   function discardBooking() { setDraft(null); setQuote(null); setQuoteErrors({}); setBookingStep(1); setRoute('home'); }
 
-  if (route === 'booking' && draft) return <BookingLayout draft={draft} step={bookingStep} onNavigate={setBookingStep} onDiscard={discardBooking} quote={quote} quoteErrors={quoteErrors}>
-    {bookingStep === 1 ? <BookingStepOne draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(2)} /> : bookingStep === 2 ? <BookingSchedule draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(3)} /> : bookingStep === 3 ? <BookingTiming draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(4)} /> : bookingStep === 4 ? <BookingDetails draft={draft} quoteErrors={quoteErrors} onDraftChange={setDraft} onNext={() => setBookingStep(5)} /> : <section className="booking-placeholder" aria-labelledby="booking-step-heading"><h1 id="booking-step-heading">Payment Details</h1><p>This booking step will be available next.</p></section>}
+  async function applyPromo(code: string) {
+    if (!draft) return;
+    try {
+      const nextQuote = await quoteBooking({ ...toBookingQuoteRequest(draft), promoCode: code });
+      setDraft({ ...draft, promoCode: nextQuote.billing.promoCode ?? code });
+      setQuote(nextQuote);
+      setQuoteErrors({});
+    } catch (error) {
+      if (error instanceof QuoteRequestError && error.status === 422) throw new Error(error.fieldErrors.promoCode ?? 'That discount code is not eligible.');
+      if (error instanceof QuoteRequestError && error.status === 401) throw new Error('Your session has ended. Sign in again, then retry.');
+      throw new Error('We could not apply that discount code. Please try again.');
+    }
+  }
+
+  if (route === 'booking' && draft) return <BookingLayout draft={draft} step={bookingStep} onNavigate={setBookingStep} onDiscard={discardBooking} quote={quote} quoteErrors={quoteErrors} quotePending={quotePending}>
+    {bookingStep === 1 ? <BookingStepOne draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(2)} /> : bookingStep === 2 ? <BookingSchedule draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(3)} /> : bookingStep === 3 ? <BookingTiming draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(4)} /> : bookingStep === 4 ? <BookingDetails draft={draft} quoteErrors={quoteErrors} onDraftChange={setDraft} onNext={() => setBookingStep(5)} /> : <BookingCheckout draft={draft} quote={quote} quotePending={quotePending} quoteErrors={quoteErrors} onApplyPromo={applyPromo} />}
   </BookingLayout>;
   if (route === 'login' || route === 'signup') return <AuthPage mode={route} onModeChange={setRoute} onSuccess={authenticated} onExit={leaveAuthentication} />;
   return <HomePage selection={selection} onSelectionChange={setSelection} onLogin={() => setRoute('login')} onBooking={beginBooking} onWordmark={() => setPendingBooking(null)} />;

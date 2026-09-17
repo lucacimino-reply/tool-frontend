@@ -37,7 +37,21 @@ export interface BookingQuoteRequest {
   promoCode?: string;
 }
 
-export interface BookingQuote { billing: { currency: 'USD'; appointmentValue: string } }
+export interface BillingSnapshot {
+  currency: 'USD';
+  baseService: string;
+  flexibleDiscount: string;
+  extrasTotal: string;
+  frequencyDiscount: string;
+  appointmentValue: string;
+  promoCode?: string;
+  promoDiscount: string;
+  subtotal: string;
+  tax: string;
+  total: string;
+}
+
+export interface BookingQuote { billing: BillingSnapshot }
 
 export function createBookingDraft(service: BookingDraft['service']): BookingDraft {
   const now = new Date();
