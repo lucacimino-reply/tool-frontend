@@ -5,6 +5,8 @@ import { getSession } from './features/auth/auth.api';
 import type { AuthenticatedCustomer } from './features/auth/auth.types';
 import { BookingStepOne } from './features/booking/BookingStepOne';
 import { BookingLayout } from './features/booking/BookingLayout';
+import { BookingSchedule } from './features/booking/BookingSchedule';
+import { BookingTiming } from './features/booking/BookingTiming';
 import { createBookingDraft, type BookingDraft, type BookingStep } from './features/booking/booking.types';
 import { HomePage, type HomeSelection } from './features/home/HomePage';
 
@@ -68,7 +70,7 @@ export default function App() {
   function discardBooking() { setDraft(null); setBookingStep(1); setRoute('home'); }
 
   if (route === 'booking' && draft) return <BookingLayout draft={draft} step={bookingStep} onNavigate={setBookingStep} onDiscard={discardBooking}>
-    {bookingStep === 1 ? <BookingStepOne draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(2)} /> : <section className="booking-placeholder" aria-labelledby="booking-step-heading"><h1 id="booking-step-heading">{bookingStep === 2 ? 'Book Date' : bookingStep === 3 ? 'Book Timing' : bookingStep === 4 ? 'Add Your Address & Details' : 'Payment Details'}</h1><p>This booking step will be available next.</p></section>}
+    {bookingStep === 1 ? <BookingStepOne draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(2)} /> : bookingStep === 2 ? <BookingSchedule draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(3)} /> : bookingStep === 3 ? <BookingTiming draft={draft} onDraftChange={setDraft} onNext={() => setBookingStep(4)} /> : <section className="booking-placeholder" aria-labelledby="booking-step-heading"><h1 id="booking-step-heading">{bookingStep === 4 ? 'Add Your Address & Details' : 'Payment Details'}</h1><p>This booking step will be available next.</p></section>}
   </BookingLayout>;
   if (route === 'login' || route === 'signup') return <AuthPage mode={route} onModeChange={setRoute} onSuccess={authenticated} onExit={leaveAuthentication} />;
   return <HomePage selection={selection} onSelectionChange={setSelection} onLogin={() => setRoute('login')} onBooking={beginBooking} onWordmark={() => setPendingBooking(null)} />;
