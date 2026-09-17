@@ -21,6 +21,11 @@ export function compareLocalDates(left: LocalCalendarDate, right: LocalCalendarD
   return dateKey(left).localeCompare(dateKey(right));
 }
 
+export function addLocalDays(date: LocalCalendarDate, days: number): LocalCalendarDate {
+  const next = new Date(date.year, date.month, date.day + days);
+  return { year: next.getFullYear(), month: next.getMonth(), day: next.getDate() };
+}
+
 export function formatLocalDate(value: string, options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'long', day: 'numeric' }): string {
   const date = parseDateKey(value);
   return new Intl.DateTimeFormat(undefined, options).format(new Date(date.year, date.month, date.day));

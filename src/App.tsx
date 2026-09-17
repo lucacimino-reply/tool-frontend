@@ -23,6 +23,8 @@ export default function App() {
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [quoteErrors, setQuoteErrors] = useState<Record<string, string>>({});
   const quoteRequestId = useRef(0);
+  const quoteRequest = draft ? toBookingQuoteRequest(draft) : null;
+  const quoteRequestKey = quoteRequest ? JSON.stringify(quoteRequest) : null;
 
   useEffect(() => {
     getSession()
@@ -52,9 +54,9 @@ export default function App() {
   }, [customer, pendingBooking, sessionStatus]);
 
   useEffect(() => {
-    if (!draft || !customer) return;
+    if (!quoteRequest || !customer) return;
     const requestId = ++quoteRequestId.current;
-    quoteBooking(toBookingQuoteRequest(draft)).then((nextQuote) => {
+    quoteBooking(quoteRequest).then((nextQuote) => {
       if (requestId === quoteRequestId.current) { setQuote(nextQuote); setQuoteErrors({}); }
     }).catch((error: unknown) => {
       if (requestId !== quoteRequestId.current) return;
@@ -62,7 +64,7 @@ export default function App() {
       if (error instanceof QuoteRequestError) setQuoteErrors(Object.keys(error.fieldErrors).length ? error.fieldErrors : { quote: error.message });
       else setQuoteErrors({ quote: 'We could not update your appointment value. Please try again.' });
     });
-  }, [customer, draft]);
+  }, [customer, quoteRequestKey]);
 
   function beginBooking(currentSelection: HomeSelection) {
     if (sessionStatus === 'loading') {

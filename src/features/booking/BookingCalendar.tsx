@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { compareLocalDates, dateKey, daysInMonth, localToday, parseDateKey, type LocalCalendarDate } from './local-date';
+import { addLocalDays, compareLocalDates, dateKey, daysInMonth, localToday, parseDateKey, type LocalCalendarDate } from './local-date';
 
 interface BookingCalendarProps {
   selectedDate: string;
@@ -25,15 +25,14 @@ export function BookingCalendar({ selectedDate, onSelect, compact = false }: Boo
   }
 
   if (compact) {
-    const start = new Date(selected.year, selected.month, selected.day - 3);
+    const start = addLocalDays(selected, -3);
     const dates = Array.from({ length: 7 }, (_, index): LocalCalendarDate => {
-      const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
-      return { year: date.getFullYear(), month: date.getMonth(), day: date.getDate() };
+      return addLocalDays(start, index);
     });
     return <div className="compact-calendar" aria-label="Schedule date">
-      <button type="button" aria-label="Previous week" onClick={() => onSelect(dateKey({ year: selected.year, month: selected.month, day: selected.day - 7 }))} disabled={compareLocalDates({ year: selected.year, month: selected.month, day: selected.day - 7 }, today) < 0}>←</button>
+      <button type="button" aria-label="Previous week" onClick={() => onSelect(dateKey(addLocalDays(selected, -7)))} disabled={compareLocalDates(addLocalDays(selected, -7), today) < 0}>←</button>
       {dates.map((date) => <button key={dateKey(date)} type="button" className={dateKey(date) === selectedDate ? 'selected' : ''} aria-pressed={dateKey(date) === selectedDate} disabled={compareLocalDates(date, today) < 0} onClick={() => onSelect(dateKey(date))}>{date.day}</button>)}
-      <button type="button" aria-label="Next week" onClick={() => onSelect(dateKey({ year: selected.year, month: selected.month, day: selected.day + 7 }))}>→</button>
+      <button type="button" aria-label="Next week" onClick={() => onSelect(dateKey(addLocalDays(selected, 7)))}>→</button>
     </div>;
   }
 

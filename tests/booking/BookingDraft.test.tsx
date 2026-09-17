@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import App from '../../src/App';
 import { createBookingDraft } from '../../src/features/booking/booking.types';
+import { addLocalDays, dateKey } from '../../src/features/booking/local-date';
 
 function response(status: number, body: object = {}) { return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }); }
 function renderSignedInApp() { vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(200, { customer: { id: '1', name: 'Customer', email: 'customer@example.com' } }))); return render(<App />); }
@@ -67,6 +68,11 @@ describe('booking draft', () => {
     expect(createBookingDraft({ location: 'Studio', rooms: 2, cleanType: 'Standard' }).schedule).toMatchObject({ date: '2026-04-17' });
   });
 
+  it('normalizes compact-calendar week changes across month boundaries', () => {
+    expect(dateKey(addLocalDays({ year: 2026, month: 2, day: 3 }, -7))).toBe('2026-02-24');
+    expect(dateKey(addLocalDays({ year: 2026, month: 11, day: 28 }, 7))).toBe('2027-01-04');
+  });
+
   it('offers exactly the fixed arrivals and keeps flexible and fixed arrivals mutually exclusive', async () => {
     const user = userEvent.setup();
     renderSignedInApp();
@@ -102,6 +108,8 @@ describe('booking draft', () => {
     await user.type(screen.getByRole('textbox', { name: 'Pet description' }), 'Cat');
     await user.click(screen.getByRole('button', { name: 'No' }));
     expect(screen.queryByRole('textbox', { name: 'Pet description' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Address' })).toHaveAttribute('maxlength', '255');
+    expect(screen.getByRole('textbox', { name: 'Additional Notes' })).toHaveAttribute('maxlength', '2000');
     await user.type(screen.getByRole('textbox', { name: 'Address' }), '  1009 3rd Ave  ');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('heading', { name: 'Payment Details' })).toBeInTheDocument();
