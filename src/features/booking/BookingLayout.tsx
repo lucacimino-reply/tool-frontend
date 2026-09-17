@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { BookingDraft, BookingStep } from './booking.types';
+import type { BookingDraft, BookingQuote, BookingStep } from './booking.types';
 import { formatLocalDate } from './local-date';
 
 interface BookingLayoutProps {
@@ -8,10 +8,12 @@ interface BookingLayoutProps {
   step: BookingStep;
   onNavigate: (step: BookingStep) => void;
   onDiscard: () => void;
+  quote: BookingQuote | null;
+  quoteErrors: Record<string, string>;
   children: ReactNode;
 }
 
-export function BookingLayout({ draft, step, onNavigate, onDiscard, children }: BookingLayoutProps) {
+export function BookingLayout({ draft, step, onNavigate, onDiscard, quote, quoteErrors, children }: BookingLayoutProps) {
   const serviceItems: Array<{ label: string; value: string; target: BookingStep }> = [
     { label: 'Location', value: draft.service.location, target: 1 },
     { label: 'Rooms', value: String(draft.service.rooms), target: 1 },
@@ -26,8 +28,9 @@ export function BookingLayout({ draft, step, onNavigate, onDiscard, children }: 
       {serviceItems.map((item) => <button className={step === item.target ? 'summary-item active' : 'summary-item'} type="button" key={item.label} onClick={() => onNavigate(item.target)}>
         <strong>{item.value}</strong><span>{item.label}</span>
       </button>)}
-      <aside aria-label="Appointment value"><strong>--</strong><span>Appointment Value</span></aside>
+      <aside aria-label="Appointment value"><strong>{quote?.billing?.currency === 'USD' ? `$${quote.billing.appointmentValue}` : '--'}</strong><span>Appointment Value</span></aside>
     </header>
+    {Object.keys(quoteErrors).length > 0 && <section className="quote-error" role="alert"><strong>We could not update your appointment value.</strong>{Object.entries(quoteErrors).map(([field, message]) => <p key={field}>{field}: {message}</p>)}</section>}
     {children}
   </main>;
 }

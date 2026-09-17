@@ -84,6 +84,80 @@ describe('booking draft', () => {
     expect(flexible).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: '09:00am' })).toHaveAttribute('aria-pressed', 'false');
   });
+
+  it('uses the required details defaults, validates trimmed inputs, and clears pets when No is selected', async () => {
+    const user = userEvent.setup();
+    renderSignedInApp();
+    await user.click(await screen.findByRole('button', { name: /Booking/ }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByRole('button', { name: 'Onetime' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Someone is home' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'No' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Yes' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Address is required.')).toBeInTheDocument();
+    expect(screen.getByText('Pet description is required.')).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Pet description' }), 'Cat');
+    await user.click(screen.getByRole('button', { name: 'No' }));
+    expect(screen.queryByRole('textbox', { name: 'Pet description' })).not.toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Address' }), '  1009 3rd Ave  ');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByRole('heading', { name: 'Payment Details' })).toBeInTheDocument();
+  });
+
+  it('sends only normalized quote fields and renders the canonical appointment value', async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/auth/session') return Promise.resolve(response(200, { customer: { id: '1', name: 'Customer', email: 'customer@example.com' } }));
+      return Promise.resolve(response(200, { billing: { currency: 'USD', appointmentValue: '31.90' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /Booking/ }));
+    await waitFor(() => expect(screen.getByLabelText('Appointment value')).toHaveTextContent('$31.90'));
+    const call = fetchMock.mock.calls.find(([url]) => url === '/api/booking-quotes');
+    expect(call?.[1]).toMatchObject({ credentials: 'include', method: 'POST' });
+    expect(JSON.parse((call?.[1] as RequestInit).body as string)).toEqual({ service: { location: 'studio', rooms: 2, cleanType: 'standard' }, arrival: { type: 'flexible' }, details: { frequency: 'onetime', extras: [] } });
+  });
+
+  it('keeps the newer canonical quote when an earlier response arrives late', async () => {
+    const user = userEvent.setup();
+    let resolveFirst!: (value: Response) => void;
+    const firstQuote = new Promise<Response>((resolve) => { resolveFirst = resolve; });
+    let quoteCount = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/auth/session') return Promise.resolve(response(200, { customer: { id: '1', name: 'Customer', email: 'customer@example.com' } }));
+      quoteCount += 1;
+      return quoteCount === 1 ? firstQuote : Promise.resolve(response(200, { billing: { currency: 'USD', appointmentValue: '40.00' } }));
+    }));
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /Booking/ }));
+    await user.click(screen.getByRole('button', { name: 'House' }));
+    await waitFor(() => expect(screen.getByLabelText('Appointment value')).toHaveTextContent('$40.00'));
+    resolveFirst(response(200, { billing: { currency: 'USD', appointmentValue: '20.00' } }));
+    await waitFor(() => expect(screen.getByLabelText('Appointment value')).toHaveTextContent('$40.00'));
+  });
+
+  it('renders quote field errors without replacing the prior canonical value', async () => {
+    const user = userEvent.setup();
+    let quoteCount = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/auth/session') return Promise.resolve(response(200, { customer: { id: '1', name: 'Customer', email: 'customer@example.com' } }));
+      quoteCount += 1;
+      return quoteCount === 1 ? Promise.resolve(response(200, { billing: { currency: 'USD', appointmentValue: '31.90' } })) : Promise.resolve(response(422, { code: 'invalid', message: 'Invalid extra', fieldErrors: { 'details.extras': 'Choose valid extras.' } }));
+    }));
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /Booking/ }));
+    await waitFor(() => expect(screen.getByLabelText('Appointment value')).toHaveTextContent('$31.90'));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Inside fridge ($25.00)' }));
+    expect(await screen.findByText('details.extras: Choose valid extras.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Appointment value')).toHaveTextContent('$31.90');
+  });
 });
 
 afterEach(() => vi.useRealTimers());

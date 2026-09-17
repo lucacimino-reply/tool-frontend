@@ -9,27 +9,35 @@ export const FIXED_ARRIVAL_TIMES = [
 
 export type FixedArrivalTime = (typeof FIXED_ARRIVAL_TIMES)[number];
 export type ArrivalSelection = { type: 'flexible' } | { type: 'fixed'; time: FixedArrivalTime };
+export const FREQUENCIES = ['onetime', 'weekly', 'every_2_weeks', 'every_4_weeks'] as const;
+export const ACCESS_METHODS = ['someone_is_home', 'doorman', 'hidden_key', 'others'] as const;
+export const EXTRAS = ['inside_fridge', 'inside_oven', 'inside_cabinets'] as const;
+export type Frequency = (typeof FREQUENCIES)[number];
+export type AccessMethod = (typeof ACCESS_METHODS)[number];
+export type Extra = (typeof EXTRAS)[number];
 
 export interface BookingDraft {
   service: { location: Location; rooms: RoomCount; cleanType: CleanType };
   arrival: ArrivalSelection;
-  details: { frequency: 'onetime' | 'weekly' | 'biweekly' | 'monthly'; extras: string[] };
+  details: { frequency: Frequency; extras: Extra[] };
   promoCode?: string;
   schedule?: { date: string; customerTimeZone: string };
   address?: string;
   apartmentNumber?: string;
-  accessMethod?: 'home' | 'doorman' | 'hidden_key' | 'other';
+  accessMethod?: AccessMethod;
   hasPets?: boolean;
   petDescription?: string;
   additionalNotes?: string;
 }
 
 export interface BookingQuoteRequest {
-  service: BookingDraft['service'];
+  service: { location: 'studio' | 'house' | 'commercial' | 'residential'; rooms: RoomCount; cleanType: 'standard' | 'deep_clean' | 'moving_in_out' | 'post_construction' };
   arrival: ArrivalSelection;
   details: BookingDraft['details'];
   promoCode?: string;
 }
+
+export interface BookingQuote { billing: { currency: 'USD'; appointmentValue: string } }
 
 export function createBookingDraft(service: BookingDraft['service']): BookingDraft {
   const now = new Date();
@@ -38,10 +46,16 @@ export function createBookingDraft(service: BookingDraft['service']): BookingDra
     service,
     arrival: { type: 'flexible' },
     details: { frequency: 'onetime', extras: [] },
+    address: '',
+    accessMethod: 'someone_is_home',
+    hasPets: false,
     schedule: { date, customerTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
   };
 }
 
 export function toBookingQuoteRequest(draft: BookingDraft): BookingQuoteRequest {
-  return { service: draft.service, arrival: draft.arrival, details: draft.details, ...(draft.promoCode ? { promoCode: draft.promoCode } : {}) };
+  const location = { Studio: 'studio', House: 'house', Commercial: 'commercial', Residential: 'residential' } as const;
+  const cleanType = { Standard: 'standard', 'Deep Clean': 'deep_clean', 'Moving In/Out': 'moving_in_out', 'Post Construction': 'post_construction' } as const;
+  const promoCode = draft.promoCode?.trim();
+  return { service: { location: location[draft.service.location], rooms: draft.service.rooms, cleanType: cleanType[draft.service.cleanType] }, arrival: draft.arrival, details: draft.details, ...(promoCode ? { promoCode } : {}) };
 }
