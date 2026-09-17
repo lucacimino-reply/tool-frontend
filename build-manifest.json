@@ -1,6 +1,6 @@
 {
   "image": {
     "name": "clean-frontend",
-    "tag": "build-public-clean-home"
+    "tag": "clean-authentication-and-booking-resumption"
   }
 }

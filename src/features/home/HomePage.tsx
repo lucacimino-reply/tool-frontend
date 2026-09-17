@@ -12,22 +12,40 @@ function preventNavigation(event: MouseEvent<HTMLAnchorElement>) {
   event.preventDefault();
 }
 
-export function HomePage() {
-  const [location, setLocation] = useState<Location>('Studio');
-  const [rooms, setRooms] = useState<RoomCount>(2);
-  const [cleanType, setCleanType] = useState<CleanType>('Standard');
+export interface HomeSelection {
+  location: Location;
+  rooms: RoomCount;
+  cleanType: CleanType;
+}
+
+interface HomePageProps {
+  selection?: HomeSelection;
+  onSelectionChange?: (selection: HomeSelection) => void;
+  onLogin?: () => void;
+  onBooking?: (selection: HomeSelection) => void;
+  onWordmark?: () => void;
+}
+
+export function HomePage({ selection, onSelectionChange, onLogin, onBooking, onWordmark }: HomePageProps) {
+  const [localSelection, setLocalSelection] = useState<HomeSelection>({ location: 'Studio', rooms: 2, cleanType: 'Standard' });
   const [entryMessage, setEntryMessage] = useState('');
+  const currentSelection = selection ?? localSelection;
+
+  function updateSelection(nextSelection: HomeSelection) {
+    if (onSelectionChange) onSelectionChange(nextSelection);
+    else setLocalSelection(nextSelection);
+  }
 
   function restoreHome() {
-    setLocation('Studio');
-    setRooms(2);
-    setCleanType('Standard');
+    updateSelection({ location: 'Studio', rooms: 2, cleanType: 'Standard' });
     setEntryMessage('');
+    onWordmark?.();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function beginBooking() {
-    setEntryMessage(`Booking will continue with ${location}, ${rooms} rooms, and ${cleanType}.`);
+    if (onBooking) onBooking(currentSelection);
+    else setEntryMessage(`Booking will continue with ${currentSelection.location}, ${currentSelection.rooms} rooms, and ${currentSelection.cleanType}.`);
   }
 
   return (
@@ -39,17 +57,17 @@ export function HomePage() {
         <nav aria-label="Location categories" className="location-nav">
           {LOCATIONS.map((item) => (
             <button
-              className={location === item ? 'active' : ''}
+               className={currentSelection.location === item ? 'active' : ''}
               key={item}
               type="button"
-              aria-pressed={location === item}
-              onClick={() => setLocation(item)}
+               aria-pressed={currentSelection.location === item}
+               onClick={() => updateSelection({ ...currentSelection, location: item })}
             >
               {item}
             </button>
           ))}
         </nav>
-        <button className="login-button" type="button" onClick={() => setEntryMessage('Login will be available in the next experience.')}>Login</button>
+         <button className="login-button" type="button" onClick={onLogin}>Login</button>
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
@@ -62,20 +80,20 @@ export function HomePage() {
           <form className="booking-form" onSubmit={(event) => { event.preventDefault(); beginBooking(); }}>
             <label>
               <span className="sr-only">Number of rooms</span>
-              <select aria-label="Number of rooms" value={rooms} onChange={(event) => setRooms(Number(event.target.value) as RoomCount)}>
+               <select aria-label="Number of rooms" value={currentSelection.rooms} onChange={(event) => updateSelection({ ...currentSelection, rooms: Number(event.target.value) as RoomCount })}>
                 {ROOM_COUNTS.map((count) => <option key={count} value={count}>{count}</option>)}
               </select>
             </label>
             <span className="form-label">Rooms</span>
             <label>
               <span className="sr-only">Clean type</span>
-              <select aria-label="Clean type" value={cleanType} onChange={(event) => setCleanType(event.target.value as CleanType)}>
+               <select aria-label="Clean type" value={currentSelection.cleanType} onChange={(event) => updateSelection({ ...currentSelection, cleanType: event.target.value as CleanType })}>
                 {CLEAN_TYPES.map((type) => <option key={type.name} value={type.name}>{type.name}</option>)}
               </select>
             </label>
             <button type="submit">Booking <span aria-hidden="true">→</span></button>
           </form>
-          <p className="service-estimate" aria-live="polite">{CLEAN_TYPES.find((type) => type.name === cleanType)?.estimate}</p>
+           <p className="service-estimate" aria-live="polite">{CLEAN_TYPES.find((type) => type.name === currentSelection.cleanType)?.estimate}</p>
           {entryMessage && <p className="entry-message" role="status">{entryMessage}</p>}
         </div>
       </section>
